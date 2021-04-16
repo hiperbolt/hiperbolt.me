@@ -1,0 +1,80 @@
+<!doctype html>
+  <html>
+    <head>
+      <link rel="stylesheet" href="xterm/xterm.css" />
+      <script src="xterm/xterm.js"></script>
+    </head>
+    <body>
+      <script src="/socket.io/socket.io.js"></script>
+      <div id="terminal"></div>
+      <script>
+
+  var socket = io();
+
+  var term = new Terminal();
+  term.open(document.getElementById('terminal'));
+
+  function runFakeTerminal() {
+    if (term._initialized) {
+      return;
+    }
+
+    term._initialized = true;
+
+    term.writeln('github.com/hiperbolt');
+    term.writeln('Welcome to my portfolio.');
+    term.writeln('Commands available are: ls | cat');
+    term.writeln('Clear text version of my portfolio available at hiperbolt.me/clear-text');
+    term.writeln('');
+    prompt(term);
+
+    var args;
+
+    term.onData(e => {
+      switch (e) {
+        case '\r': // Enter
+          socket.emit('command', String(args));
+          args = "";
+          break;
+
+        case '\u0003': // Ctrl+C
+          prompt(term);
+          break;
+
+        case '\u007F': // Backspace (DEL)
+          if (term._core.buffer.x > 2) {
+            term.write('\b \b');
+          }
+          args = args.slice(0, -1);
+          break;
+
+        default: // Print all other characters for demo
+          term.write(e);
+          if(args == null){args = e;} else {args += e;}
+      }
+    });
+
+    socket.on('response', function(response){
+
+      switch (response) {
+        case "end-stream":
+          prompt(term);
+          break;
+      
+        default:
+          term.write(response);
+          break;
+      }
+      
+      
+    });
+
+  }
+
+  function prompt(term) {
+    term.write('\r\n$ ');
+  }
+  runFakeTerminal();
+      </script>
+    </body>
+  </html>
